@@ -1,0 +1,120 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# ails.  You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
+
+# Author: Markus Anglmaier <markus.anglmaier@brz.gv.at>
+
+"""
+EXAMPLE OUTPUT FROM AGENT
+<<<stalesvc>>>
+cato0;CPU load;0;2.0;0.51
+cato0;CPU utilization;0;2.0;0.51
+cato0;Check_MK;0;2.0;0.51
+cato0;Disk IO SUMMARY;0;2.0;0.51
+cato0;Disk IO sda;0;2.0;0.51
+cato0;Disk IO sdb;0;2.0;0.51
+cato0;Interface 3;0;2.0;0.51
+cato0;Kernel Context Switches;0;2.0;0.51
+cato0;Kernel Major Page Faults;0;2.0;0.51
+cato0;Kernel Process Creations;0;2.0;0.51
+cato0;Memory;0;2.0;0.51
+cato0;Mount options of /;0;2.0;0.51
+cato0;Mount options of /media/ata-sda2;0;2.0;0.51
+cato0;Mount options of /media/ata-sda3;0;2.0;0.51
+cato0;NVIDIA GPU Errors;0;2.0;0.51
+cato0;Number of threads;0;2.0;0.51
+cato0;Sensor Core_0;0;2.0;0.51
+cato0;Sensor Core_1;0;2.0;0.51
+cato0;Sensor Core_2;0;2.0;0.51
+cato0;Sensor Core_3;0;2.0;0.51
+cato0;TCP Connections;0;2.0;0.51
+cato0;Temperature GPU NVIDIA;0;2.0;0.51
+cato0;Uptime;0;2.0;0.51
+cato0;fs_/;0;2.0;0.51
+cato0;fs_/media/ata-sda2;0;2.0;0.51
+cato0;fs_/media/ata-sda3;0;2.0;0.51
+hans;APT Updates;0;2.0;0.88
+"""
+
+_stalesvc_default_parameters = '.*|.*|1.5|2.0'
+
+
+def inventory_stalesvc(info):
+	inventory = [('Stale Services', "_stalesvc_default_parameters")]
+	return inventory
+
+def check_times(warn, crit, service):
+	if float(service[4]) > float(warn):
+		state = 1
+	if float(service[4]) > float(crit):
+		state = 2
+	else:
+		state = 0
+	return state
+
+def check_stalesvc(item, params, info):
+	search_pattern = []
+	""" 
+	params:
+	(u'.*|.*|1.5|3.0\na|b|2|4\n',)
+	""" 
+	for line in params[0].rstrip().split('\n'):
+		hostname = line.split('|')[0]
+		service = line.split('|')[1]
+		warn_minutes = line.split('|')[2]
+		crit_minutes = line.split('|')[3]
+		search_pattern.append([hostname, service, warn_minutes, crit_minutes])
+	state = 0
+	infostring = ""
+	for svc in info:
+		svc =  " ".join(svc).split(";")
+		found_hosts = [item for item in search_pattern if re.match("^{}$".format(item[0]), svc[0])]
+		if found_hosts:
+			# found a host in search_pattern
+			found_service = [ item for item in found_hosts if re.match("^{}$".format(item[1]), svc[1])]
+			if found_service:
+				# found a service
+				warn_stale_minutes, crit_stale_minutes = found_service[0][-2:]
+				#print warn_stale_minutes, crit_stale_minutes, svc,  check_times(warn_stale_minutes, crit_stale_minutes, svc)
+				svc_state = check_times(warn_stale_minutes, crit_stale_minutes, svc)
+				state = svc_state if state < svc_state else state
+				if svc_state == 1:
+					infostring += "Services older then {} times of Checkinterval {:20} - {:20} - {:20} - {:20}\\n".format(warn_stale_minutes, svc[0], svc[1], svc[2], svc[4])
+				elif svc_state == 2:
+					infostring += "Services older then {} times of Checkinterval {:20} - {:20} - {:20} - {:20}\\n".format(crit_stale_minutes, svc[0], svc[1], svc[2], svc[4])
+				continue
+	if state == 0:
+		infostring = "All Services checked in Checkinterval"
+	return state, "{}".format(infostring)
+
+
+# declare the check to Check_MK
+check_info["stalesvc"] = {
+    'check_function':            check_stalesvc,
+    'inventory_function':        inventory_stalesvc,
+    'service_description':       'Status of %s',
+    'has_perfdata':       False,
+    'group': 'stalesvc',
+    }
