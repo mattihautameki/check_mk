@@ -23,17 +23,22 @@ register_check_parameters(
     subgroup_applications,
     "stalesvc",
     _("Parameter for stale Servicecheck"),
-    Tuple(
-          help = _("All services older then 1.0 * checkinterval are reported to the check by the agent. Here you can set exceptions for named services or hosts by regex."),
-          elements = [
-                  TextAreaUnicode(
-	              title = _("Regex for service filtering or host"),
-                      unit = _("regex"),
-          	      help = _("Format: $hostname|$service|warn|crit NEWLINE  $hostname1|$service1|warn|crit... when you use this rule make sure to deploy the most significat regex in the last line ('.*|.*|1.5|2.0')"),
-		      default_value = ".*|.*|1.5|2.0",
-                  ),
-          ]
+    Dictionary(
+        help = _("All services older then 1.0 * checkinterval are reported to the check by the agent. Here you can set exceptions for named services or hosts by regex."),
+        elements = [
+            ("search_pattern",
+             TextAreaUnicode(
+	         title = _("Regex for service filtering or host"),
+                 unit = _("regex"),
+                 help = _("Format: $hostname|$service|warn|crit NEWLINE  $hostname1|$service1|warn|crit... when you use this rule make sure to deploy the most significat regex in the last line ('.*|.*|1.5|2.0')"),
+                 default_value = ".*|.*|1.5|2.0",
+             ),
+            ),
+        ]
     ),
-    None,
+    TextAscii(
+        title = _("Name of service"),
+        allow_empty = False,
+    ),
     "dict",
 )
