@@ -65,7 +65,7 @@ _stalesvc_default_parameters =  {
 
 
 def inventory_stalesvc(info):
-    inventory = [('Stale Services', "_stalesvc_default_parameters")]
+    inventory = [('Stale Services', "_stalesvc_default_parameters"),]
     return inventory
 
 def check_times(warn, crit, service):
@@ -86,7 +86,7 @@ def check_stalesvc(item, params, info):
     params
     {'search_pattern': u'vmitra1|.*|99999|999999\n.*|.*|1.5|2.0\n'}
     """ 
-    print params
+
     for line in params['search_pattern'].rstrip().split('\n'):
         hostname = line.split('|')[0]
         service = line.split('|')[1]
@@ -96,7 +96,8 @@ def check_stalesvc(item, params, info):
 
     for svc in info:
         svc =  " ".join(svc).split(";")
-        if svc[5] == 0 and params['hide_pending'] == 1: continue
+        if svc[5] == "0.0" and params['hide_pending'] == "1":
+	    continue
         found_hosts = [item for item in search_pattern if re.match("^{}$".format(item[0]), svc[0])]
         if found_hosts:
             # found a host in search_pattern
@@ -108,9 +109,9 @@ def check_stalesvc(item, params, info):
                 svc_state = check_times(warn_stale_minutes, crit_stale_minutes, svc)
                 state = svc_state if state < svc_state else state
                 if svc_state == 1:
-                    infostring += "Services older then {} times of Checkinterval {:20} - {:20} - {:20} - {:20}\\n".format(warn_stale_minutes, svc[0], svc[1], svc[2], svc[4])
+                    infostring += "Services older then {} times of Checkinterval {} - {} - {} - {} - {}\\n".format(warn_stale_minutes, svc[0], svc[1], svc[2], svc[4], svc[5])
                 elif svc_state == 2:
-                    infostring += "Services older then {} times of Checkinterval {:20} - {:20} - {:20} - {:20}\\n".format(crit_stale_minutes, svc[0], svc[1], svc[2], svc[4])
+                    infostring += "Services older then {} times of Checkinterval {} - {} - {} - {} - {}\\n".format(crit_stale_minutes, svc[0], svc[1], svc[2], svc[4], svc[5])
                 continue
     if state == 0:
         infostring = "All Services checked in Checkinterval"
