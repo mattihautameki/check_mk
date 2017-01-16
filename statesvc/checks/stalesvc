@@ -81,7 +81,7 @@ def check_times(warn, crit, service):
 def check_stalesvc(item, params, info):
     search_pattern = []
     state = 0
-    infostring = ""
+    infostring = "\n"
     """ 
     params
     {'search_pattern': u'vmitra1|.*|99999|999999\n.*|.*|1.5|2.0\n'}
