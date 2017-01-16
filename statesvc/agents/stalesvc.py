@@ -10,7 +10,7 @@ s.connect(socket_path)
 
 # Write command to socket
 s.send("GET services\n")
-s.send("Columns: host_name description state check_interval staleness\n")
+s.send("Columns: host_name description state check_interval staleness last_state_change\n")
 s.send("Filter: staleness > 1\n")
 
 # Important: Close sending direction. That way

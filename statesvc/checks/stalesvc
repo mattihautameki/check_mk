@@ -60,6 +60,7 @@ hans;APT Updates;0;2.0;0.88
 
 _stalesvc_default_parameters =  {
     "search_pattern" : '.*|.*|1.5|2.0',
+    "hide_pending" : 0,
 }
 
 
@@ -85,6 +86,7 @@ def check_stalesvc(item, params, info):
     params
     {'search_pattern': u'vmitra1|.*|99999|999999\n.*|.*|1.5|2.0\n'}
     """ 
+    print params
     for line in params['search_pattern'].rstrip().split('\n'):
         hostname = line.split('|')[0]
         service = line.split('|')[1]
@@ -94,6 +96,7 @@ def check_stalesvc(item, params, info):
 
     for svc in info:
         svc =  " ".join(svc).split(";")
+        if svc[5] == 0 and params['hide_pending'] == 1: continue
         found_hosts = [item for item in search_pattern if re.match("^{}$".format(item[0]), svc[0])]
         if found_hosts:
             # found a host in search_pattern

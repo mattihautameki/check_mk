@@ -34,6 +34,13 @@ register_check_parameters(
                  default_value = ".*|.*|1.5|2.0",
              ),
             ),
+            ("hide_pending",
+             FixedValue(
+                 "1",
+                 totext = "",
+	         title = _("Hide active checks which not yet succeded."), 
+                 ),
+            ),
         ]
     ),
     TextAscii(
