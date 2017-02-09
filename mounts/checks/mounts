@@ -1,0 +1,112 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+# +------------------------------------------------------------------+
+# |             ____ _               _        __  __ _  __           |
+# |            / ___| |__   ___  ___| | __   |  \/  | |/ /           |
+# |           | |   | '_ \ / _ \/ __| |/ /   | |\/| | ' /            |
+# |           | |___| | | |  __/ (__|   <    | |  | | . \            |
+# |            \____|_| |_|\___|\___|_|\_\___|_|  |_|_|\_\           |
+# |                                                                  |
+# | Copyright Mathias Kettner 2014             mk@mathias-kettner.de |
+# +------------------------------------------------------------------+
+#
+# This file is part of Check_MK.
+# The official homepage is at http://mathias-kettner.de/check_mk.
+#
+# check_mk is free software;  you can redistribute it and/or modify it
+# under the  terms of the  GNU General Public License  as published by
+# the Free Software Foundation in version 2.  check_mk is  distributed
+# in the hope that it will be useful, but WITHOUT ANY WARRANTY;  with-
+# out even the implied warranty of  MERCHANTABILITY  or  FITNESS FOR A
+# PARTICULAR PURPOSE. See the  GNU General Public License for more de-
+# tails. You should have  received  a copy of the  GNU  General Public
+# License along with GNU Make; see the file  COPYING.  If  not,  write
+# to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
+# Boston, MA 02110-1301 USA.
+
+
+def inventory_mounts(info):
+    inventory = []
+    devices = []
+    for dev, mp, fstype, options, dump, fsck in info:
+        if fstype not in [ 'tmpfs' ] and dev not in devices:
+            devices.append(dev)
+            opts = options.split(",")
+            opts.sort()
+            inventory.append( (mp, {'exact_match': opts, 'must_contain': [], 'must_not_contain': []}) )
+    return inventory
+
+def check_mounts(item, targetopts, info):
+
+    # Ignore options that are allowed to change
+    def should_ignore_option(option):
+        for ignored_option in [ "commit=", "localalloc=", "subvol=", "subvolid=" ]:
+            if option.startswith(ignored_option):
+                return True
+        return False
+
+    for dev, mp, fstype, options, dump, fsck in info:
+        if item == mp:
+            opts = options.split(",")
+            # Now compute the exact difference.
+
+            exceeding = []
+            missing = []
+
+            if isinstance(targetopts, list):
+            	# this is to be compatible with the inventory from the original check
+                for o in opts:
+                    if o not in targetopts and not should_ignore_option(o):
+                        exceeding.append(o)
+
+                for o in targetopts:
+                    if o not in opts and not should_ignore_option(o):
+                        missing.append(o)
+            else:
+                if 'exact_match' in targetopts and targetopts['exact_match']:
+                    # this ist the default behavior for configured parameters for this check
+                    for o in opts:
+                        if o not in targetopts['exact_match'] and not should_ignore_option(o):
+                            exceeding.append(o)
+
+                    for o in targetopts['exact_match']:
+                        if o not in opts and not should_ignore_option(o):
+                            missing.append(o)
+
+                if 'must_contain' in targetopts and targetopts['must_contain']:
+                    for o in targetopts['must_contain']:
+                        if o not in opts and not should_ignore_option(o):
+                            missing.append(o)
+
+                if 'must_not_contain' in targetopts and targetopts['must_not_contain']:
+                    for o in opts:
+                        if o not in targetopts['must_not_contain'] and not should_ignore_option(o):
+                            exceeding.append(o)
+ 
+            if not missing and not exceeding:
+                return (0, "mount options exactly as expected")
+
+            infos = []
+            if missing:
+                infos.append("missing: %s" % ",".join(missing))
+            if exceeding:
+                infos.append("exceeding: %s" % ",".join(exceeding))
+            infotext = ", ".join(infos)
+
+            if "ro" in exceeding:
+                return (2, "filesystem has switched to read-only "
+                           "and is probably corrupted(!!), " + infotext)
+
+            # Just warn in other cases
+            return (1, infotext)
+
+    return (3, "filesystem not mounted")
+
+
+
+check_info["mounts"] = {
+    'check_function':          check_mounts,
+    'inventory_function':      inventory_mounts,
+    'service_description':     'Mount options of %s',
+    'group':                   'fs_mount_options',
+}
