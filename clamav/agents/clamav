@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+echo '<<<clamav>>>'
+if [ "`clamscan -V | awk -F"/" '{print $NF}' | date +"%s" -f -`" != "" ];then
+  echo cvd "`clamscan -V | awk -F"/" '{print $NF}' | date +"%s" -f -`"
+fi

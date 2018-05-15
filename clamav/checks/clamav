@@ -1,0 +1,43 @@
+#!/usr/bin/python
+
+_clamav_default_parameters = {
+    "max_old"      : (48, 72),
+}
+
+"""
+agent output
+<<<clamav>>>
+cvd 1459774026
+"""
+
+def inventory_clamav(info):
+        return [ (x[0], "_clamav_default_parameters" ) for x in info ]
+
+def check_clamav(item, params, info):
+	import time
+	now = int(time.mktime(time.localtime()))
+        warn_hours, crit_hours = params['max_old']
+        for line in info:
+                if line[0] == item:
+			age = abs(int(line[1]) - now)
+                        if age >= crit_hours * 3600:
+                                rc = 2
+                                info = "Clamav Database is {0} hours old".format(age/3600)
+                        elif age >= warn_hours * 3600:
+                                rc = 1
+                                info = "Clamav Database is {0} hours old".format(age/3600)
+                        else:
+                                rc = 0
+                                info = "Clamav Database is {0} hours old".format(age/3600)
+        return rc, info
+
+
+# declare the check to Check_MK
+check_info["clamav"] = {
+    'check_function':            check_clamav,
+    'inventory_function':        inventory_clamav,
+    'service_description':       'Age of clamav %s',
+    'has_perfdata':       False,
+    'group' : 'clamav',
+    }
+
