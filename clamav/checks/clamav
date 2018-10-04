@@ -1,7 +1,10 @@
 #!/usr/bin/python
 
-_clamav_default_parameters = {
-    "max_old"      : (48, 72),
+
+factory_settings['clamav_default_levels'] = {
+	"times": (400,600)
+	#'warn': "48",
+	#'crit': "72",
 }
 
 """
@@ -10,13 +13,17 @@ agent output
 cvd 1459774026
 """
 
-def inventory_clamav(info):
-        return [ (x[0], "_clamav_default_parameters" ) for x in info ]
+def inventory_clamav(checkname, info):
+	inventory = []
+	for name, age in info:
+		inventory.append((name,None))
+	return inventory
 
 def check_clamav(item, params, info):
 	import time
 	now = int(time.mktime(time.localtime()))
-        warn_hours, crit_hours = params['max_old']
+        warn_hours = params['times'][0]
+        crit_hours = params['times'][1]
         for line in info:
                 if line[0] == item:
 			age = abs(int(line[1]) - now)
@@ -39,5 +46,6 @@ check_info["clamav"] = {
     'service_description':       'Age of clamav %s',
     'has_perfdata':       False,
     'group' : 'clamav',
+    'default_levels_variable':	'clamav_default_levels',
     }
 

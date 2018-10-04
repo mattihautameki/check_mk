@@ -12,7 +12,7 @@ register_check_parameters(
     Dictionary(
         help = _("Here you can override the default levels for the clamav check."),
         elements = [
-            ( "max_old",
+            ( "times",
                 Tuple(
                 title = _("Age of CVD"),
                 elements = [
